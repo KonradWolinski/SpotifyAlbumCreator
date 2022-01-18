@@ -15,8 +15,7 @@ namespace SpotifyAlbumCreator.Controllers
         private readonly SpotifyService _spotifyService;
         private readonly DiscogsService _discogsService;
 
-        private AccountModel accountModel;
-        private static string state {get; set;}
+        private static string? state {get; set;}
 
         private string loginUrl = "https://accounts.spotify.com/api/token";
         private List<string> spotifyScopes = new() { "playlist-modify-private", 
@@ -31,15 +30,8 @@ namespace SpotifyAlbumCreator.Controllers
         }
 
 
-        public IActionResult Index()
-        {
-            return View();
-        }
-        // public IActionResult Index(AuthorizationCodeResponse result)
-        // {
-
-        //     return View();
-        // }
+        // public IActionResult Index() => View();
+        public IActionResult Index(AccountModel? accountModel = null) => View(accountModel);
         public IActionResult Login()
         {
             state = GetState();
@@ -48,14 +40,13 @@ namespace SpotifyAlbumCreator.Controllers
                                                         {"scope", String.Join("%20", spotifyScopes)},
                                                         {"state", state},
                                                         {"redirect_uri", Request.GetEncodedUrl().Replace("Login", "Callback")}};
-
-
             //change redirectUri to callback, in that get function get token, return to Index
+
             string url = UriValues.SpotifyAuthorization + string.Join('&',request.Select(val => val.Key + "=" + val.Value).ToArray());
             return Redirect(url);
         }
 
-        public IActionResult Callback(AuthorizationCodeResponse res)
+        public async Task<IActionResult> Callback(AuthorizationCodeResponse res)
         {
             if(res.State != state || !String.IsNullOrEmpty(res.Error) || res.Code == null)
                 return RedirectToAction("Index");
@@ -63,20 +54,20 @@ namespace SpotifyAlbumCreator.Controllers
             var callbackIndex = Request.GetEncodedUrl().IndexOf("Callback");
             var redirectUri = Request.GetEncodedUrl().Substring(0, callbackIndex + "Callback".Length);
             
-            var token = _spotifyService.RequestAccessToken(res.Code, redirectUri,
-                _configuration["ClientID:Spotify"], _configuration["Secrets:SpotifyApi"]).Result;
+            var token = await _spotifyService.RequestAccessToken(res.Code, redirectUri,
+                _configuration["ClientID:Spotify"], _configuration["Secrets:SpotifyApi"]);
             //replace with url in appsettings
 
-            
+            //null check
+
             SpotifyAccessTokenResponse accessTokenResponse = 
                 JsonSerializer.Deserialize<SpotifyAccessTokenResponse>(token);
 
-            //accountModel = new(){Username = }
             var userJson = _spotifyService.GetUser(accessTokenResponse.access_token).Result;
 
-            SpotifyUserModel userModel = JsonSerializer.Deserialize<SpotifyUserModel>(userJson);
+            SpotifyUserModel? userModel = JsonSerializer.Deserialize<SpotifyUserModel>(userJson);
 
-            accountModel = new() {Username=userModel.DisplayName, AccessTokenResponse=accessTokenResponse};
+            AccountModel accountModel = new() {Username=userModel.DisplayName, AccessTokenResponse=accessTokenResponse};
 
             //get token
             return RedirectToAction("Index", accountModel);
@@ -86,6 +77,7 @@ namespace SpotifyAlbumCreator.Controllers
         public IActionResult Index(string searchString)
         {
             var discogsResponse = SearchDiscogs(searchString);
+
             RedirectToAction("Search", new { discogsModel = discogsResponse });
 
             // var spotifyId = FindSpotifyAlbumId(discogsResponseConverted); //get arist and title from discogsResponse
@@ -95,11 +87,22 @@ namespace SpotifyAlbumCreator.Controllers
             //
             return RedirectToAction("Index"); //?
         }
-        public IActionResult Search(DiscogsAlbumModel discogsModel) => View(discogsModel);
-        public IActionResult Tracklist(List<SpotifySongModel> tracklist) => View(tracklist);
-        private DiscogsAlbumModel SearchDiscogs(string querry)
+        public IActionResult Search(ICollection<DiscogsAlbumModel> discogsModel) => View(discogsModel);
+        public IActionResult Tracklist(ICollection<string> tracklist)
         {
-            return new DiscogsAlbumModel(); ///
+            //find song on spotify
+            //button on the bottom of view lets you add the playlist
+            //after that return to Index
+
+            return View(tracklist);
+        } 
+            
+        private List<DiscogsAlbumModel> SearchDiscogs(string querry)
+        {
+            _discogsService.GetSearchResults(_configuration["ClientID:Discogs"], _configuration["Secrets:DiscogsApi"],
+            querry);
+
+            return new();
         }
 
         private string FindSpotifyAlbumId(string query)

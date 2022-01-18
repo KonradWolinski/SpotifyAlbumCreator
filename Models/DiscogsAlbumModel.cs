@@ -7,5 +7,7 @@ namespace SpotifyAlbumCreator.Models
         public string Year {get; set;}
         public string ThumbnailUrl {get; set;}        
 
+        public ICollection<String> Songs {get; set;}
+
     }
 }

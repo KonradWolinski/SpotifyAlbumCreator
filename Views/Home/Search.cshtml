@@ -1,0 +1,36 @@
+@model ICollection<DiscogsAlbumModel>
+@{
+    ViewData["Title"] = "Search";
+}
+
+<html>
+
+<head> </head>
+
+<body>
+    <div>
+        <table class="table table-primary table-striped">
+            @foreach(var album in Model)
+            {
+                <tr>
+                    <td><img class="img-thumbnail" src="@album.ThumbnailUrl"></td>
+                    <td>
+                        <a asp-route="Tracklist" asp-route-tracklist="@album.Songs" 
+                            data-bs-toggle="tooltip" data-bs-placement="right" 
+                            title="@string.Join('\n', album.Songs)">>@album.Title (@album.Year)
+                        </a>
+                    </td>
+                </tr>
+            }
+        </table>
+    </div>
+<script>
+    $(function() {
+        $('[data-toggle="tooltip"]').tooltip();
+    })
+</script>
+
+</body>
+
+</html>
+
