@@ -1,4 +1,4 @@
-﻿@model AccountModel
+﻿@model AccountModel?
 @{
     ViewData["Title"] = "Home Page";
 }
@@ -25,8 +25,8 @@
             @using (Html.BeginForm("Search"))
             {
                 <p>
-                    <label for="site-search">Find album:</label>
-                    <input type="search" id="site-search" name="s" aria-label="Album name">
+                    <label for="searchQuery">Find album:</label>
+                    <input type="search" id="searchQuery" name="searchQuery" aria-label="Album name">
 
                     <input id="btnSearchAlbum" class="btn-primary" type="submit" value="Search"></input>
 
